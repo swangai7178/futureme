@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -16,27 +15,35 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loading = false;
 
   Future<void> sendMessage(String message) async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _response = '';
+    });
 
     final url = Uri.parse('http://127.0.0.1:11434/api/chat');
 
-    final res = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        "model": "qwen:latest", // or llama3:latest, phi3, etc.
-        "messages": [
-          {"role": "user", "content": message}
-        ],
-        "stream": false
-      }),
-    );
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "model": "qwen3:8b",
+          "messages": [
+            {"role": "user", "content": message}
+          ],
+          "stream": false
+        }),
+      );
 
-    if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      setState(() => _response = data['message']['content']);
-    } else {
-      setState(() => _response = 'Error: ${res.statusCode}\n${res.body}');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final content = data["message"]?["content"] ?? "No response from Jarvis.";
+        setState(() => _response = content);
+      } else {
+        setState(() => _response = 'Error ${res.statusCode}: ${res.body}');
+      }
+    } catch (e) {
+      setState(() => _response = 'Exception: $e');
     }
 
     setState(() => _loading = false);
@@ -45,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Talk to Jarvis")),
+      appBar: AppBar(title: const Text("Talk to Jarvis")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -55,7 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: InputDecoration(
                 labelText: 'Say something...',
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.send),
+                  icon: const Icon(Icons.send),
                   onPressed: _loading
                       ? null
                       : () {
@@ -69,14 +76,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (!_loading && text.isNotEmpty) sendMessage(text);
               },
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _loading
-                ? CircularProgressIndicator()
+                ? const CircularProgressIndicator()
                 : Expanded(
                     child: SingleChildScrollView(
                       child: Text(
                         _response,
-                        style: TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 16),
                       ),
                     ),
                   )
