@@ -22,10 +22,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:64100/api/generate'),
+        Uri.parse('http://127.0.0.1:64100'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "model": "qwen:7b", // change this based on model
+          "model": "qwen2.5", // change this based on model
           "prompt": prompt,
           "stream": false
         }),
