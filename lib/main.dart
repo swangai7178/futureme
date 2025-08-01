@@ -25,111 +25,163 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+class NodeData {
+  final String title;
+  final String description;
+  final List<NodeData> children;
+  bool expanded;
 
-class Branch {
-  final String choice;
-  final String outcome;
-  List<Branch> children = [];
-  bool expanded = false;
-
-  Branch({required this.choice, required this.outcome});
+  NodeData({
+    required this.title,
+    required this.description,
+    this.children = const [],
+    this.expanded = false,
+  });
 }
 
 class TreeGraph extends StatefulWidget {
-  const TreeGraph({super.key});
-
   @override
   _TreeGraphState createState() => _TreeGraphState();
 }
 
 class _TreeGraphState extends State<TreeGraph> {
-  final Map<Branch, Offset> nodePositions = {};
-  final double xGap = 200;
-  final double yGap = 100;
+  final Map<NodeData, Offset> _nodePositions = {};
 
-  late Branch root;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Root scenario
-    root = Branch(choice: "Graduate High School", outcome: "You finish school");
-
-    // First level choices
-    var job = Branch(choice: "Get a job", outcome: "Earn money early");
-    var college = Branch(choice: "Go to college", outcome: "Build skills");
-
-    // Second level
-    var promotion = Branch(choice: "Work hard", outcome: "Get promoted");
-    var travel = Branch(choice: "Travel", outcome: "See the world");
-    var studyMore = Branch(choice: "Masters Degree", outcome: "Higher expertise");
-
-    root.children.addAll([job, college]);
-    job.children.addAll([promotion, travel]);
-    college.children.add(studyMore);
-  }
+  final NodeData _root = NodeData(
+    title: "Graduate High School",
+    description: "You finish school",
+    children: [
+      NodeData(
+        title: "Go to University",
+        description: "You pursue higher education",
+        children: [
+          NodeData(
+            title: "Graduate University",
+            description: "You get a degree",
+            children: [
+              NodeData(
+                title: "Get a Job",
+                description: "You start your career",
+              ),
+              NodeData(
+                title: "Start a Business",
+                description: "You become an entrepreneur",
+              ),
+            ],
+          ),
+        ],
+      ),
+      NodeData(
+        title: "Start Working",
+        description: "You earn money early",
+        children: [
+          NodeData(
+            title: "Grow Career",
+            description: "You gain experience",
+          ),
+          NodeData(
+            title: "Change Fields",
+            description: "You explore new opportunities",
+          ),
+        ],
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
-    nodePositions.clear();
-
-    return Stack(
-      children: [
-        ..._buildTree(root, 0, 0),
-        CustomPaint(
-          size: Size.infinite,
-          painter: LinePainter(nodePositions),
-        ),
-      ],
-    );
-  }
-
-  List<Widget> _buildTree(Branch node, double x, double y) {
     List<Widget> widgets = [];
+    _nodePositions.clear();
 
-    nodePositions[node] = Offset(x + 100, y + 30); // For line drawing
+    double startX = 20;
+    double startY = 100;
+    double horizontalSpacing = 260;
+    double verticalSpacing = 120;
 
-    widgets.add(Positioned(
-      left: x,
-      top: y,
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
+    void buildNodes(NodeData node, double x, double y) {
+      final key = GlobalKey();
+      widgets.add(Positioned(
+        left: x,
+        top: y,
+        child: LifeChoiceCard(
+          key: key,
+          title: node.title,
+          description: node.description,
+          onTap: () => setState(() {
             node.expanded = !node.expanded;
-          });
-        },
-        child: Container(
-          width: 180,
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blueAccent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Text(node.choice, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              SizedBox(height: 4),
-              Text(node.outcome, style: TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
+          }),
         ),
-      ),
-    ));
+      ));
+      _nodePositions[node] = Offset(x, y);
 
-    if (node.expanded) {
-      for (int i = 0; i < node.children.length; i++) {
-        final child = node.children[i];
-        final childX = x + xGap;
-        final childY = y + i * yGap + 50;
-
-        widgets.addAll(_buildTree(child, childX, childY));
+      if (node.expanded) {
+        for (int i = 0; i < node.children.length; i++) {
+          var child = node.children[i];
+          double childX = x + horizontalSpacing;
+          double childY = y + (i * verticalSpacing);
+          buildNodes(child, childX, childY);
+        }
       }
     }
 
-    return widgets;
+    buildNodes(_root, startX, startY);
+
+    return Stack(
+      children: [
+        // Line painter below everything else
+        Positioned.fill(
+          child: CustomPaint(
+            painter: TreeLinePainter(_nodePositions, _root),
+          ),
+        ),
+        ...widgets, // Cards on top of lines
+      ],
+    );
   }
 }
+
+class TreeLinePainter extends CustomPainter {
+  final Map<NodeData, Offset> nodePositions;
+  final NodeData root;
+
+  TreeLinePainter(this.nodePositions, this.root);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey
+      ..strokeWidth = 2;
+
+    void drawLines(NodeData node) {
+      final parentOffset = nodePositions[node];
+      if (parentOffset == null) return;
+
+      if (node.expanded) {
+        for (var child in node.children) {
+          final childOffset = nodePositions[child];
+          if (childOffset != null) {
+            final start = Offset(
+              parentOffset.dx + 120, // right side of card
+              parentOffset.dy + 30,  // center vertically
+            );
+            final end = Offset(
+              childOffset.dx,
+              childOffset.dy + 30,
+            );
+            canvas.drawLine(start, end, paint);
+            drawLines(child);
+          }
+        }
+      }
+    }
+
+    drawLines(root);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
 
 class LinePainter extends CustomPainter {
   final Map<Branch, Offset> positions;
