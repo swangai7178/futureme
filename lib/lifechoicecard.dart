@@ -7,12 +7,12 @@ class LifeChoiceCard extends StatelessWidget {
   final bool isSelected;
 
   const LifeChoiceCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.onTap,
     this.isSelected = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

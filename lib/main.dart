@@ -41,6 +41,8 @@ class NodeData {
 }
 
 class TreeGraph extends StatefulWidget {
+  const TreeGraph({super.key});
+
   @override
   _TreeGraphState createState() => _TreeGraphState();
 }
