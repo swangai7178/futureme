@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class AiAssistantScreen extends StatefulWidget {
   const AiAssistantScreen({super.key});
@@ -10,36 +10,33 @@ class AiAssistantScreen extends StatefulWidget {
 }
 
 class _AiAssistantScreenState extends State<AiAssistantScreen> {
-  final List<Map<String, String>> messages = []; // {'role': 'user/ai', 'text': ...}
   final TextEditingController _controller = TextEditingController();
-  bool loading = false;
+  final List<Map<String, String>> messages = [];
 
-  Future<void> sendMessage(String prompt) async {
+  Future<void> sendMessage(String message) async {
     setState(() {
-      messages.add({'role': 'user', 'text': prompt});
-      loading = true;
+      messages.add({'role': 'user', 'text': message});
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:64100'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "model": "qwen2.5", // change this based on model
-          "prompt": prompt,
-          "stream": false
-        }),
-      );
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:64100'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "messages": [
+          {"role": "user", "content": message}
+        ]
+      }),
+    );
 
+    if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      final aiResponse = data['choices'][0]['message']['content'];
       setState(() {
-        messages.add({'role': 'ai', 'text': data['response'] ?? 'No response.'});
-        loading = false;
+        messages.add({'role': 'assistant', 'text': aiResponse});
       });
-    } catch (e) {
+    } else {
       setState(() {
-        messages.add({'role': 'ai', 'text': '⚠️ Error: $e'});
-        loading = false;
+        messages.add({'role': 'assistant', 'text': "⚠️ Failed to get response."});
       });
     }
   }
@@ -47,7 +44,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Ask AI for Guidance")),
+      appBar: AppBar(title: Text('🧠 Jarvis AI')),
       body: Column(
         children: [
           Expanded(
@@ -61,41 +58,42 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: isUser ? Colors.blue[100] : Colors.grey[200],
+                      color: isUser ? Colors.blueAccent : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(msg['text'] ?? ''),
+                    child: Text(
+                      msg['text'] ?? '',
+                      style: TextStyle(color: isUser ? Colors.white : Colors.black87),
+                    ),
                   ),
                 );
               },
             ),
           ),
-          if (loading)
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: CircularProgressIndicator(),
-            ),
-          const Divider(height: 1),
+          Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            padding: const EdgeInsets.all(8),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(hintText: "Ask a question..."),
-                    onSubmitted: (text) {
-                      if (text.trim().isNotEmpty) {
-                        sendMessage(text.trim());
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty) {
+                        sendMessage(value.trim());
                         _controller.clear();
                       }
                     },
+                    decoration: InputDecoration(
+                      hintText: 'Say something...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: Icon(Icons.send),
                   onPressed: () {
                     final text = _controller.text.trim();
                     if (text.isNotEmpty) {
@@ -103,10 +101,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                       _controller.clear();
                     }
                   },
-                ),
+                )
               ],
             ),
-          )
+          ),
         ],
       ),
     );
