@@ -16,7 +16,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> sendMessage(String message) async {
     setState(() => _loading = true);
 
-    final url = Uri.parse('http://127.0.0.1:11434');
+    final url = Uri.parse('http://127.0.0.1:11434/api/chat');
 
     final res = await http.post(
       url,
