@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => AiAssistantScreen()),
+                MaterialPageRoute(builder: (context) => ChatScreen()),
               );
             },
           ),

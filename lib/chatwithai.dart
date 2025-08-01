@@ -1,111 +1,85 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-class AiAssistantScreen extends StatefulWidget {
-  const AiAssistantScreen({super.key});
-
+class ChatScreen extends StatefulWidget {
   @override
-  _AiAssistantScreenState createState() => _AiAssistantScreenState();
+  _ChatScreenState createState() => _ChatScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen> {
+class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, String>> messages = [];
+  String _response = '';
+  bool _loading = false;
 
   Future<void> sendMessage(String message) async {
-    setState(() {
-      messages.add({'role': 'user', 'text': message});
-    });
+    setState(() => _loading = true);
 
-    final response = await http.post(
-      Uri.parse('http://127.0.0.1:64100'),
+    final url = Uri.parse('http://127.0.0.1:11434');
+
+    final res = await http.post(
+      url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
+        "model": "qwen:latest", // or llama3:latest, phi3, etc.
         "messages": [
           {"role": "user", "content": message}
-        ]
+        ],
+        "stream": false
       }),
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final aiResponse = data['choices'][0]['message']['content'];
-      setState(() {
-        messages.add({'role': 'assistant', 'text': aiResponse});
-      });
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      setState(() => _response = data['message']['content']);
     } else {
-      setState(() {
-        messages.add({'role': 'assistant', 'text': "⚠️ Failed to get response."});
-      });
+      setState(() => _response = 'Error: ${res.statusCode}\n${res.body}');
     }
+
+    setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('🧠 Jarvis AI')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                final isUser = msg['role'] == 'user';
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isUser ? Colors.blueAccent : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      msg['text'] ?? '',
-                      style: TextStyle(color: isUser ? Colors.white : Colors.black87),
-                    ),
-                  ),
-                );
+      appBar: AppBar(title: Text("Talk to Jarvis")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                labelText: 'Say something...',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.send),
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          if (_controller.text.isNotEmpty) {
+                            sendMessage(_controller.text);
+                          }
+                        },
+                ),
+              ),
+              onSubmitted: (text) {
+                if (!_loading && text.isNotEmpty) sendMessage(text);
               },
             ),
-          ),
-          Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        sendMessage(value.trim());
-                        _controller.clear();
-                      }
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Say something...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            SizedBox(height: 24),
+            _loading
+                ? CircularProgressIndicator()
+                : Expanded(
+                    child: SingleChildScrollView(
+                      child: Text(
+                        _response,
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: () {
-                    final text = _controller.text.trim();
-                    if (text.isNotEmpty) {
-                      sendMessage(text);
-                      _controller.clear();
-                    }
-                  },
-                )
-              ],
-            ),
-          ),
-        ],
+                  )
+          ],
+        ),
       ),
     );
   }
