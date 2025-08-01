@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:futureme/chatwithai.dart';
 import 'package:futureme/lifechoicecard.dart';
 
 
@@ -9,21 +10,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Decision Tree',
-      home: Scaffold(
-        appBar: AppBar(title: Text('Life Choices Tree')),
-        body: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Container(
-            height: 1000,
-            width: 2000,
-            padding: const EdgeInsets.all(20),
-            child: TreeGraph(),
+   return MaterialApp(
+  title: 'Decision Tree',
+  home: Builder(
+    builder: (context) => Scaffold(
+      appBar: AppBar(
+        title: Text('Life Choices Tree'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.info_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AiAssistantScreen()),
+              );
+            },
           ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Container(
+          height: 1000,
+          width: 2000,
+          padding: const EdgeInsets.all(20),
+          child: TreeGraph(),
         ),
       ),
-    );
+    ),
+  ),
+);
+
   }
 }
 class NodeData {
