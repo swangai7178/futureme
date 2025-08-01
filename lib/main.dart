@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:futureme/lifechoicecard.dart';
 
 
 void main() => runApp(MyApp());
@@ -182,31 +183,3 @@ class TreeLinePainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
 
-
-class LinePainter extends CustomPainter {
-  final Map<Branch, Offset> positions;
-
-  LinePainter(this.positions);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey.shade800
-      ..strokeWidth = 2;
-
-    for (var entry in positions.entries) {
-      final parent = entry.key;
-      final parentOffset = entry.value;
-
-      for (var child in parent.children) {
-        final childOffset = positions[child];
-        if (childOffset != null) {
-          canvas.drawLine(parentOffset, childOffset, paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(LinePainter oldDelegate) => true;
-}
