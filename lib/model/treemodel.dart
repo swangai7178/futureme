@@ -10,4 +10,13 @@ class TreeNodeData {
     required this.description,
     this.children = const [],
   });
+
+  TreeNodeData copyWith({List<TreeNodeData>? children}) {
+    return TreeNodeData(
+      id: id,
+      title: title,
+      description: description,
+      children: children ?? this.children,
+    );
+  }
 }
