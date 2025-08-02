@@ -60,16 +60,31 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Talk to Jarvis")),
+      appBar: AppBar(
+        title: const Text("Talk to Jarvis"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                labelText: 'Say something...',
-                suffixIcon: IconButton(
+            // Input Section
+            Row(
+              children: [
+                // Text Input
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      labelText: 'Say something...',
+                    ),
+                    onSubmitted: (text) {
+                      if (!_loading && text.isNotEmpty) sendMessage(text);
+                    },
+                  ),
+                ),
+                // Send Button
+                IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _loading
                       ? null
@@ -79,22 +94,29 @@ class _ChatScreenState extends State<ChatScreen> {
                           }
                         },
                 ),
-              ),
-              onSubmitted: (text) {
-                if (!_loading && text.isNotEmpty) sendMessage(text);
-              },
+              ],
             ),
             const SizedBox(height: 24),
-            _loading
-                ? const CircularProgressIndicator()
-                : Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        _response,
-                        style: const TextStyle(fontSize: 16),
+            // Response Section
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        child: Text(
+                          _response,
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
-                    ),
-                  )
+              ),
+            ),
           ],
         ),
       ),
