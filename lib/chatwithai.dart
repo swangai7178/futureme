@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:futureme/model/treemodel.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -56,69 +58,148 @@ class _ChatScreenState extends State<ChatScreen> {
 
   setState(() => _loading = false);
 }
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Talk to Jarvis"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Input Section
-            Row(
-              children: [
-                // Text Input
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      labelText: 'Say something...',
-                    ),
-                    onSubmitted: (text) {
-                      if (!_loading && text.isNotEmpty) sendMessage(text);
-                    },
-                  ),
-                ),
-                // Send Button
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _loading
-                      ? null
-                      : () {
-                          if (_controller.text.isNotEmpty) {
-                            sendMessage(_controller.text);
-                          }
-                        },
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Response Section
-            Expanded(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Jarvis Psychoanalysis'),
+      centerTitle: true,
+      backgroundColor: Colors.deepPurple,
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              reverse: true,
               child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
+                alignment: Alignment.topLeft,
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
-                    : SingleChildScrollView(
-                        child: Text(
-                          _response,
-                          style: const TextStyle(fontSize: 16),
+                    : Text(
+                        _response.isNotEmpty
+                            ? _response
+                            : 'Jarvis is ready. Ask anything...',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.black87,
                         ),
                       ),
               ),
             ),
-          ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'Type your thoughts...',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.deepPurple),
+                onPressed: () {
+                  final input = _controller.text.trim();
+                  if (input.isNotEmpty) {
+                    sendMessage(input);
+                    _controller.clear();
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+  Widget buildTree(TreeNodeData node) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      GestureDetector(
+        onTap: () async {
+          if (node.children.isEmpty) {
+            final newChild = await getResponseFromAI(node.description);
+            setState(() {
+              node.children.add(newChild);
+            });
+          }
+        },
+        child: Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(node.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(node.description),
+              ],
+            ),
+          ),
         ),
       ),
+      Padding(
+        padding: const EdgeInsets.only(left: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: node.children.map(buildTree).toList(),
+        ),
+      ),
+    ],
+  );
+}
+Future<TreeNodeData> getResponseFromAI(String message) async {
+  final url = Uri.parse('http://127.0.0.1:11434/api/chat');
+
+  final res = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      "model": "qwen3:8b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You're a psychoanalyst. Respond in JSON with 'title' and 'description'."
+        },
+        {"role": "user", "content": message}
+      ],
+      "stream": false
+    }),
+  );
+
+  if (res.statusCode == 200) {
+    final data = jsonDecode(res.body);
+    final content = data["message"]?["content"] ?? '{}';
+    final json = jsonDecode(content);
+
+    return TreeNodeData(
+      id: const Uuid().v4(),
+      title: json["title"] ?? "No Title",
+      description: json["description"] ?? "No Description",
+    );
+  } else {
+    return TreeNodeData(
+      id: const Uuid().v4(),
+      title: "Error",
+      description: "AI returned error: ${res.statusCode}",
     );
   }
+}
+
 }
