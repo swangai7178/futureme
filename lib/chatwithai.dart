@@ -47,7 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       final content = data["message"]?["content"] ?? "No response from Jarvis.";
-      print("Response: $content");
+      
       setState(() => _response = content);
     } else {
       setState(() => _response = 'Error ${res.statusCode}: ${res.body}');
