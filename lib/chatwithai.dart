@@ -30,7 +30,8 @@ class _ChatScreenState extends State<ChatScreen> {
         "messages": [
           {
             "role": "system",
-            "content": "You are a compassionate psychoanalyst. Your role is to understand the user's emotions, analyze psychological patterns, and offer insightful reflections. After analysis, describe possible future implications based on their mental state."
+            "content": "You are a compassionate psychoanalyst. Respond in JSON format with 'title' and 'description'. You must analyze the user's emotions and mental state, then give a brief future implication in the description."
+
           },
           {
             "role": "user",
