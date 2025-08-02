@@ -145,6 +145,7 @@ Future<TreeNodeData> getResponseFromAI(String message) async {
     final data = jsonDecode(res.body);
     final content = data["message"]?["content"] ?? '{}';
     final json = jsonDecode(content);
+    print("AI Response: $json");
 
     return TreeNodeData(
       id: const Uuid().v4(),
