@@ -144,7 +144,9 @@ Future<TreeNodeData> getResponseFromAI(String message) async {
   if (res.statusCode == 200) {
     final data = jsonDecode(res.body);
     final content = data["message"]?["content"] ?? '{}';
-    final json = jsonDecode(content);
+      print(content);
+       final cleaned = content.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
+      final json = jsonDecode(cleaned);
     print("AI Response: $json");
 
     return TreeNodeData(
