@@ -13,7 +13,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   String _response = '';
   bool _loading = false;
-
   Future<void> sendMessage(String message) async {
   setState(() {
     _loading = true;
@@ -55,8 +54,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   setState(() => _loading = false);
 }
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
