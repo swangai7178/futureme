@@ -2,7 +2,7 @@ class TreeNodeData {
   final String id;
   final String title;
   final String description;
-  final List<TreeNodeData> children;
+  List<TreeNodeData> children;
 
   TreeNodeData({
     required this.id,

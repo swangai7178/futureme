@@ -116,7 +116,7 @@ Future<void> handleUserMessage(String message, [TreeNodeData? parent]) async {
       if (parent == null) {
         rootNodes.add(newNode);
       } else {
-        parent.children.add(newNode);
+        parent.children = List<TreeNodeData>.from(parent.children)..add(newNode);
       }
     });
   }
