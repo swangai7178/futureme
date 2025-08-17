@@ -109,9 +109,10 @@ Widget build(BuildContext context) {
       ),
     );
   }
-
 Future<void> handleUserMessage(String message, [TreeNodeData? parent]) async {
   final responses = await getResponseFromAI(message);
+
+  print("AI returned ${responses.length} suggestions");
 
   setState(() {
     if (parent == null) {
@@ -144,11 +145,14 @@ Future<List<TreeNodeData>> getResponseFromAI(String message) async {
     }),
   );
 
+
+
   if (res.statusCode == 200) {
     final data = jsonDecode(res.body);
     final content = data["message"]?["content"] ?? '[]';
 
     final cleaned = content.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
+
 
     List<dynamic> parsed;
     try {
