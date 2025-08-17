@@ -124,60 +124,71 @@ Future<void> handleUserMessage(String message, [TreeNodeData? parent]) async {
 }
 
 
+ Future<List<TreeNodeData>> getResponseFromAI(String message) async {
+    final url = Uri.parse('http://127.0.0.1:11434/api/chat');
 
-Future<List<TreeNodeData>> getResponseFromAI(String message) async {
-  final url = Uri.parse('http://127.0.0.1:11434/api/chat');
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "model": "qwen3:8b",
+        "messages": [
+          {
+            "role": "system",
+            "content":
+                "You're a psychoanalyst. Respond ONLY in JSON. Output an array of suggestions where each item has 'title' and 'description'. If only one suggestion, still wrap in an array."
+          },
+          {"role": "user", "content": message}
+        ],
+        "stream": false
+      }),
+    );
 
-  final res = await http.post(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      "model": "qwen3:8b",
-      "messages": [
-        {
-          "role": "system",
-          "content":
-              "You're a psychoanalyst. Respond ONLY in JSON. Output an array of suggestions where each item has 'title' and 'description'."
-        },
-        {"role": "user", "content": message}
-      ],
-      "stream": false
-    }),
-  );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      final raw = data["message"]?["content"] ?? '[]';
 
+      // Clean <think> tags
+      final cleaned =
+          raw.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
 
+      print("Raw AI response: $raw");
+      print("Cleaned AI response: $cleaned");
 
-  if (res.statusCode == 200) {
-    final data = jsonDecode(res.body);
-    final content = data["message"]?["content"] ?? '[]';
+      dynamic parsed;
+      try {
+        parsed = jsonDecode(cleaned);
+      } catch (e) {
+        print("❌ JSON decode failed: $e");
+        return [];
+      }
 
-    final cleaned = content.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
+      // Normalize: single object → wrap into list
+      if (parsed is Map<String, dynamic>) {
+        parsed = [parsed];
+      }
+      if (parsed is! List) {
+        return [];
+      }
 
-
-    List<dynamic> parsed;
-    try {
-      parsed = jsonDecode(cleaned);
-    } catch (e) {
-      parsed = [];
+      // Convert to TreeNodeData
+      return parsed.map<TreeNodeData>((item) {
+        return TreeNodeData(
+          id: const Uuid().v4(),
+          title: item["title"] ?? "No Title",
+          description: item["description"] ?? "No Description",
+        );
+      }).toList();
+    } else {
+      return [
+        TreeNodeData(
+          id: const Uuid().v4(),
+          title: "Error",
+          description: "AI returned error: ${res.statusCode}",
+        )
+      ];
     }
-
-    return parsed.map<TreeNodeData>((item) {
-      return TreeNodeData(
-        id: const Uuid().v4(),
-        title: item["title"] ?? "No Title",
-        description: item["description"] ?? "No Description",
-      );
-    }).toList();
-  } else {
-    return [
-      TreeNodeData(
-        id: const Uuid().v4(),
-        title: "Error",
-        description: "AI returned error: ${res.statusCode}",
-      )
-    ];
   }
-}
 
 
 }
