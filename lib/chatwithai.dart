@@ -111,18 +111,20 @@ Widget build(BuildContext context) {
   }
 
 Future<void> handleUserMessage(String message, [TreeNodeData? parent]) async {
-    final newNode = await getResponseFromAI(message);
-    setState(() {
-      if (parent == null) {
-        rootNodes.add(newNode);
-      } else {
-        parent.children = List<TreeNodeData>.from(parent.children)..add(newNode);
-      }
-    });
-  }
+  final responses = await getResponseFromAI(message);
+
+  setState(() {
+    if (parent == null) {
+      rootNodes.addAll(responses);
+    } else {
+      parent.children.addAll(responses);
+    }
+  });
+}
 
 
-Future<TreeNodeData> getResponseFromAI(String message) async {
+
+Future<List<TreeNodeData>> getResponseFromAI(String message) async {
   final url = Uri.parse('http://127.0.0.1:11434/api/chat');
 
   final res = await http.post(
@@ -133,7 +135,8 @@ Future<TreeNodeData> getResponseFromAI(String message) async {
       "messages": [
         {
           "role": "system",
-          "content": "You're a psychoanalyst. Respond in JSON with 'title' and 'description'."
+          "content":
+              "You're a psychoanalyst. Respond ONLY in JSON. Output an array of suggestions where each item has 'title' and 'description'."
         },
         {"role": "user", "content": message}
       ],
@@ -143,24 +146,34 @@ Future<TreeNodeData> getResponseFromAI(String message) async {
 
   if (res.statusCode == 200) {
     final data = jsonDecode(res.body);
-    final content = data["message"]?["content"] ?? '{}';
-     
-       final cleaned = content.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
-      final json = jsonDecode(cleaned);
+    final content = data["message"]?["content"] ?? '[]';
 
+    final cleaned = content.replaceAll(RegExp(r"<think>[\s\S]*?</think>"), "").trim();
 
-    return TreeNodeData(
-      id: const Uuid().v4(),
-      title: json["title"] ?? "No Title",
-      description: json["description"] ?? "No Description",
-    );
+    List<dynamic> parsed;
+    try {
+      parsed = jsonDecode(cleaned);
+    } catch (e) {
+      parsed = [];
+    }
+
+    return parsed.map<TreeNodeData>((item) {
+      return TreeNodeData(
+        id: const Uuid().v4(),
+        title: item["title"] ?? "No Title",
+        description: item["description"] ?? "No Description",
+      );
+    }).toList();
   } else {
-    return TreeNodeData(
-      id: const Uuid().v4(),
-      title: "Error",
-      description: "AI returned error: ${res.statusCode}",
-    );
+    return [
+      TreeNodeData(
+        id: const Uuid().v4(),
+        title: "Error",
+        description: "AI returned error: ${res.statusCode}",
+      )
+    ];
   }
-} 
+}
+
 
 }
